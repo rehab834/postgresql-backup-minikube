@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: postgres-ns
+spec:
+  schedule: "0 22 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup
+              image: postgres:14
+              command: ["/bin/bash", "/scripts/backup.sh"]
+              volumeMounts:
+                - name: script-volume
+                  mountPath: /scripts
+                - name: backup-volume
+                  mountPath: /backups
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: postgres-secret
+                      key: POSTGRES_PASSWORD
+          restartPolicy: OnFailure
+          volumes:
+            - name: script-volume
+              configMap:
+                name: postgres-backup-script
+                defaultMode: 0777
+            - name: backup-volume
+              persistentVolumeClaim:
+                claimName: postgres-backup-pvc
+

@@ -1,0 +1,32 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-manual-backup
+  namespace: postgres-ns
+spec:
+  template:
+    spec:
+      containers:
+        - name: backup
+          image: postgres:14
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              echo "🔄 Starting backup...";
+              pg_dump -U rehab -h postgres -d mydb > /backups/postgres_backup.sql;
+              echo "✅ Backup done.";
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-secret
+                  key: POSTGRES_PASSWORD
+          volumeMounts:
+            - name: backup-volume
+              mountPath: /backups
+      volumes:
+        - name: backup-volume
+          persistentVolumeClaim:
+            claimName: postgres-backup-pvc
+      restartPolicy: Never
+
